@@ -616,7 +616,6 @@ if question:
         "role": "user",
         "content": question
     })
-
     with st.chat_message("user"):
         st.markdown(question)
 
