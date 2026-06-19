@@ -510,12 +510,11 @@ st.caption(f"Probabilité de risque élevé : {probabilite * 100:.1f}%")
 # ================================================
 # PHASE 4 — ASSISTANT IA CONVERSATIONNEL
 # ================================================
-
 from groq import Groq
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # Charge les variables du fichier .env
+load_dotenv()
 
 st.markdown("---")
 st.header("🤖 Assistant IA — OCP Collaboration Intelligence")
@@ -525,7 +524,6 @@ st.info("""
 L'assistant connaît toutes vos données en temps réel.
 """)
 
-# --- Préparation du contexte des données pour l'IA ---
 nb_total = len(df)
 nb_actives = len(df[df["statut"] == "Active"])
 nb_critiques = len(df[df["risque"] >= 70])
@@ -536,118 +534,79 @@ top_budget_resp = df.groupby("responsable")["budget"].sum().idxmax()
 type_plus_risque = df.groupby("type")["risque"].mean().idxmax()
 
 contexte_donnees = f"""
-Tu es un assistant IA expert en analyse de collaborations pour OCP (Office Chérifien des Phosphates).
-Tu as accès aux données en temps réel de la plateforme OCP Collaboration Intelligence.
-
+Tu es un assistant IA expert en analyse de collaborations pour OCP.
 DONNÉES ACTUELLES :
 - Total collaborations : {nb_total}
 - Collaborations actives : {nb_actives}
-- Collaborations critiques (risque ≥ 70) : {nb_critiques}
+- Collaborations critiques (risque >= 70) : {nb_critiques}
 - Budget total géré : {budget_total:,.0f} DH
-- Budget exposé (collaborations critiques) : {budget_expose:,.0f} DH
+- Budget exposé : {budget_expose:,.0f} DH
 - Responsable avec le plus de collaborations : {top_responsable}
 - Responsable gérant le plus grand budget : {top_budget_resp}
-- Type de partenariat le plus risqué en moyenne : {type_plus_risque}
-
+- Type le plus risqué en moyenne : {type_plus_risque}
 TOP 5 COLLABORATIONS LES PLUS RISQUÉES :
 {df.nlargest(5, 'risque')[['nom', 'type', 'responsable', 'budget', 'risque']].to_string(index=False)}
-
 RÉPARTITION PAR TYPE :
 {df['type'].value_counts().to_string()}
-
 RÉPARTITION PAR STATUT :
 {df['statut'].value_counts().to_string()}
-
 Réponds toujours en français, de manière professionnelle et concise.
 Base tes réponses uniquement sur les données fournies ci-dessus.
-Si on te pose une question hors contexte OCP, redirige poliment vers les données disponibles.
 """
 
-# --- Initialisation de l'historique de conversation ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- Affichage de l'historique ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- Questions suggérées ---
 if len(st.session_state.messages) == 0:
     st.markdown("**💡 Questions suggérées :**")
     col_q1, col_q2 = st.columns(2)
 
     with col_q1:
         if st.button("🔴 Combien de collaborations sont critiques ?"):
-            st.session_state.messages.append({
-                "role": "user",
-                "content": "Combien de collaborations sont critiques et quel est le budget exposé ?"
-            })
+            st.session_state.messages.append({"role": "user", "content": "Combien de collaborations sont critiques et quel est le budget exposé ?"})
             st.rerun()
-
         if st.button("👤 Quel responsable gère le plus de budget ?"):
-            st.session_state.messages.append({
-                "role": "user",
-                "content": "Quel responsable gère le plus grand budget total ?"
-            })
+            st.session_state.messages.append({"role": "user", "content": "Quel responsable gère le plus grand budget total ?"})
             st.rerun()
 
     with col_q2:
         if st.button("📊 Quel type de partenariat est le plus risqué ?"):
-            st.session_state.messages.append({
-                "role": "user",
-                "content": "Quel type de partenariat présente le risque moyen le plus élevé ?"
-            })
+            st.session_state.messages.append({"role": "user", "content": "Quel type de partenariat présente le risque moyen le plus élevé ?"})
             st.rerun()
-
         if st.button("💰 Quel est le budget total géré ?"):
-            st.session_state.messages.append({
-                "role": "user",
-                "content": "Quel est le budget total géré par la plateforme OCP ?"
-            })
+            st.session_state.messages.append({"role": "user", "content": "Quel est le budget total géré par la plateforme OCP ?"})
             st.rerun()
 
-# --- Input utilisateur ---
 question = st.chat_input("Posez votre question sur les collaborations OCP...")
 
 if question:
-    # Ajouter la question à l'historique
-    st.session_state.messages.append({
-        "role": "user",
-        "content": question
-    })
+    st.session_state.messages.append({"role": "user", "content": question})
     with st.chat_message("user"):
         st.markdown(question)
 
-    # --- Appel à l'API Groq ---
     with st.chat_message("assistant"):
         with st.spinner("L'IA analyse vos données..."):
             try:
-               client = Groq(api_key=os.getenv("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"))
-                 response = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",# Llama 3 70B — le plus puissant de Groq
+                client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+                response = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
                     messages=[
                         {"role": "system", "content": contexte_donnees},
-                        *[{"role": m["role"], "content": m["content"]}
-                          for m in st.session_state.messages]
+                        *[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
                     ],
-                    temperature=0.3,   # Bas = réponses précises et factuelles
-                    max_tokens=500     # Réponses concises
+                    temperature=0.3,
+                    max_tokens=500
                 )
-
                 reponse_ia = response.choices[0].message.content
                 st.markdown(reponse_ia)
-
-                # Ajouter la réponse à l'historique
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": reponse_ia
-                })
-
+                st.session_state.messages.append({"role": "assistant", "content": reponse_ia})
             except Exception as e:
                 st.error(f"Erreur de connexion à l'API : {str(e)}")
 
-# --- Bouton pour effacer la conversation ---
 if len(st.session_state.messages) > 0:
     if st.button("🗑️ Effacer la conversation"):
         st.session_state.messages = []
