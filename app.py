@@ -623,9 +623,9 @@ if question:
     with st.chat_message("assistant"):
         with st.spinner("L'IA analyse vos données..."):
             try:
-               client = Groq(api_key=os.getenv("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"))
-                response = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",  # Llama 3 70B — le plus puissant de Groq
+               client = Groq(api_key=os.getenv("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"))
+                 response = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",# Llama 3 70B — le plus puissant de Groq
                     messages=[
                         {"role": "system", "content": contexte_donnees},
                         *[{"role": m["role"], "content": m["content"]}
